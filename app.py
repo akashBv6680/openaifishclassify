@@ -8,7 +8,7 @@ from transformers import ViTImageProcessor, ViTForImageClassification
 # --------------------
 st.set_page_config(page_title="Image Classifier", layout="centered")
 st.title("General Image Classifier")
-st.markdown("This app uses the **`google/vit-base-patch16-224`** model to classify uploaded images.")
+##st.markdown("This app uses the **`google/vit-base-patch16-224`** model to classify uploaded images.")
 st.write("---")
 
 # --------------------
