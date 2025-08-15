@@ -6,10 +6,9 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 # --------------------
 # 1. App Configuration
 # --------------------
-st.set_page_config(page_title="Fish Predictor", layout="centered")
-st.title("Image-Based Species Predictor")
-st.markdown("This is a new, standalone version of the app using a lightweight model to avoid system errors. "
-            "It predicts common objects from a broad list, not your specific fish species.")
+st.set_page_config(page_title="Fish Species Classifier", layout="centered")
+st.title("Image-Based Fish Species Classifier")
+st.markdown("This app uses the **`srihari19/fish-classification`** model, which is specifically trained to identify different types of fish.")
 st.write("---")
 
 # --------------------
@@ -17,22 +16,22 @@ st.write("---")
 # --------------------
 @st.cache_resource(show_spinner=False)
 def load_model_and_processor():
-    """Loads a pre-trained image classification model and its processor."""
-    model_name = "google/vit-tiny-patch16-224"
+    """Loads the fish classification model and its processor."""
+    model_name = "srihari19/fish-classification"
     try:
         processor = AutoImageProcessor.from_pretrained(model_name)
         model = AutoModelForImageClassification.from_pretrained(model_name)
         return processor, model
     except Exception as e:
         st.error(f"❌ An error occurred while loading the model: {e}")
-        st.error("The app cannot run without the model. Please check your internet connection or try again later.")
+        st.error("Please ensure the model name is correct and you have an internet connection.")
         return None, None
 
 try:
-    with st.spinner('Loading the deep learning model... This is a very small model, so it should be fast.'):
+    with st.spinner('Loading the deep learning model... This might take a moment.'):
         processor, model = load_model_and_processor()
     if processor and model:
-        st.success("✅ Model loaded successfully. Ready for predictions!")
+        st.success("✅ Model loaded successfully. Ready for classification!")
     else:
         st.stop()
 except Exception as e:
@@ -43,17 +42,17 @@ except Exception as e:
 # 3. User Interface for Image Upload
 # --------------------
 uploaded_file = st.file_uploader(
-    "Choose an image...",
+    "Choose an image of a fish...",
     type=["jpg", "jpeg", "png"],
-    help="Upload an image to get the top 5 predictions from the model."
+    help="Upload an image to get the top 5 predictions for the fish species."
 )
 
 # --------------------
-# 4. Prediction Logic
+# 4. Classification Logic
 # --------------------
 if uploaded_file is not None:
     st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-    st.write("Predicting...")
+    st.write("Classifying...")
 
     try:
         # Open and prepare the image.
@@ -62,7 +61,7 @@ if uploaded_file is not None:
         # Preprocess the image for the model.
         inputs = processor(images=image, return_tensors="pt")
         
-        # Make the prediction.
+        # Make the classification.
         with torch.no_grad():
             outputs = model(**inputs)
 
@@ -83,4 +82,4 @@ if uploaded_file is not None:
         st.balloons()
 
     except Exception as e:
-        st.error(f"An error occurred during prediction: {e}")
+        st.error(f"An error occurred during classification: {e}")
