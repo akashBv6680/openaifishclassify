@@ -8,25 +8,27 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 # --------------------
 st.set_page_config(page_title="Species Predictor", layout="centered")
 st.title("Image-Based Fish Species Predictor")
-st.markdown("This version uses a smaller model to avoid memory issues. "
-            "It predicts common objects from its internal list, not your specific fish species.")
+st.markdown("This version uses the **lightweight `google/vit-tiny-patch16-224` model** to ensure it runs without memory issues. "
+            "It will predict from a broad range of categories, not your specific fish species.")
 st.write("---")
 
 # --------------------
 # 2. Model and Processor Loading
 # --------------------
+# Use st.cache_data to load the model and processor only once.
 @st.cache_data(show_spinner=False)
 def load_model_and_processor():
     """Loads a smaller, pre-trained image classification model and its processor."""
-    model_name = "microsoft/beit-tiny-patch16-224-pt22k-ft224"
+    # Using a tiny Vision Transformer model which is very lightweight.
+    model_name = "google/vit-tiny-patch16-224"
     processor = AutoImageProcessor.from_pretrained(model_name)
     model = AutoModelForImageClassification.from_pretrained(model_name)
     return processor, model
 
 try:
-    with st.spinner('Loading the deep learning model... This is a smaller model, so it should be faster.'):
+    with st.spinner('Loading the deep learning model... This is a very small model, so it should be fast.'):
         processor, model = load_model_and_processor()
-    st.info("Model loaded successfully. Ready for predictions!")
+    st.info("✅ Model loaded successfully. Ready for predictions!")
 except Exception as e:
     st.error(f"❌ An error occurred while loading the model: {e}")
     st.error("The app cannot run without the model. Please check your internet connection or try again later.")
