@@ -1,54 +1,36 @@
 import streamlit as st
 import torch
 from PIL import Image
-from transformers import CLIPProcessor, CLIPModel
+from transformers import AutoImageProcessor, AutoModelForImageClassification
 
 # --------------------
 # 1. App Configuration
 # --------------------
 st.set_page_config(page_title="Species Predictor", layout="centered")
 st.title("Image-Based Fish Species Predictor")
-st.markdown("Upload an image of a fish, and I'll predict the species from a specific list of options.")
+st.markdown("This version uses a smaller model to avoid memory issues. "
+            "It predicts common objects from its internal list, not your specific fish species.")
 st.write("---")
 
 # --------------------
-# 2. Model and Class Names Loading
+# 2. Model and Processor Loading
 # --------------------
-# Use st.cache_data to load the model and processor only once.
 @st.cache_data(show_spinner=False)
-def load_model():
-    """Loads a pre-trained CLIP model and its processor for zero-shot classification."""
-    model_name = "openai/clip-vit-base-patch32"
-    model = CLIPModel.from_pretrained(model_name)
-    processor = CLIPProcessor.from_pretrained(model_name, use_fast=False)
+def load_model_and_processor():
+    """Loads a smaller, pre-trained image classification model and its processor."""
+    model_name = "microsoft/beit-tiny-patch16-224-pt22k-ft224"
+    processor = AutoImageProcessor.from_pretrained(model_name)
+    model = AutoModelForImageClassification.from_pretrained(model_name)
     return processor, model
 
-# Your specific list of class names
-class_names = [
-    'animal fish',
-    'animal fish bass',
-    'fish sea_food black_sea_sprat',
-    'fish sea_food gilt_head_bream',
-    'fish sea_food hourse_mackerel',
-    'fish sea_food red_mullet',
-    'fish sea_food red_sea_bream',
-    'fish sea_food sea_bass',
-    'fish sea_food shrimp',
-    'fish sea_food striped_red_mullet',
-    'fish sea_food trout'
-]
-
-# Load the model with a spinner and error handling.
 try:
-    with st.spinner('Loading the deep learning model... this might take a moment.'):
-        processor, model = load_model()
+    with st.spinner('Loading the deep learning model... This is a smaller model, so it should be faster.'):
+        processor, model = load_model_and_processor()
     st.info("Model loaded successfully. Ready for predictions!")
 except Exception as e:
     st.error(f"❌ An error occurred while loading the model: {e}")
-    st.error("This is likely due to the model being too large for the hosting environment. "
-             "The app cannot run without the model. Please consider using a service with more memory.")
+    st.error("The app cannot run without the model. Please check your internet connection or try again later.")
     st.stop()
-
 
 # --------------------
 # 3. User Interface for Image Upload
@@ -56,7 +38,7 @@ except Exception as e:
 uploaded_file = st.file_uploader(
     "Choose an image...",
     type=["jpg", "jpeg", "png"],
-    help="Upload an image of a fish to get a prediction from a predefined list."
+    help="Upload an image to get the top 5 predictions from the model."
 )
 
 # --------------------
@@ -70,31 +52,29 @@ if uploaded_file is not None:
     try:
         # Open and prepare the image.
         image = Image.open(uploaded_file).convert("RGB")
-
-        # Prepare the image and text inputs for the model.
-        inputs = processor(
-            text=class_names,
-            images=image,
-            return_tensors="pt",
-            padding=True
-        )
+        
+        # Preprocess the image for the model.
+        inputs = processor(images=image, return_tensors="pt")
         
         # Make the prediction.
         with torch.no_grad():
             outputs = model(**inputs)
 
-        # Get the scores for each class.
-        logits_per_image = outputs.logits_per_image
-        probs = logits_per_image.softmax(dim=1)
+        # Get the scores (logits) for each class.
+        logits = outputs.logits
         
-        # Find the class with the highest probability.
-        predicted_class_idx = probs.argmax().item()
-        confidence = probs[0][predicted_class_idx].item()
-        
-        # Display the result.
-        predicted_species = class_names[predicted_class_idx]
-        st.write(f"I predict this is a: **{predicted_species}** with a confidence of {confidence:.2f}")
-        st.balloons()
+        # Convert logits to probabilities and get the top 5 predictions.
+        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+        top_5_probs, top_5_indices = torch.topk(probabilities, 5)
+
+        # Display the results in a formatted list.
+        st.subheader("Top 5 Predictions:")
+        for i in range(5):
+            predicted_label = model.config.id2label[top_5_indices[i].item()]
+            confidence = top_5_probs[i].item()
+            st.write(f"**{i + 1}.** **{predicted_label}** with a confidence of {confidence:.2f}")
+
+        st.balloons() # Add a celebratory animation!
 
     except Exception as e:
         st.error(f"An error occurred during prediction: {e}")
