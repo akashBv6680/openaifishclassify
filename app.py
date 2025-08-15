@@ -21,7 +21,8 @@ def load_model():
     """Loads a pre-trained CLIP model and its processor for zero-shot classification."""
     model_name = "openai/clip-vit-base-patch32"
     model = CLIPModel.from_pretrained(model_name)
-    processor = CLIPProcessor.from_pretrained(model_name)
+    # Added 'use_fast=False' to silence the warning and ensure consistent behavior.
+    processor = CLIPProcessor.from_pretrained(model_name, use_fast=False)
     return processor, model
 
 processor, model = load_model()
@@ -91,4 +92,3 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(f"An error occurred during prediction: {e}")
-
